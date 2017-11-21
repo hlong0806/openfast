@@ -2560,6 +2560,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
    INTEGER(IntKi)              :: j
    INTEGER(IntKi)              :: idx_dof1
    INTEGER(IntKi)              :: idx_dof2
+   REAL(BDKi)		       :: tmp1, tmp2
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
 
    m%elf(:,:,:)      = 0.0_BDKi
@@ -2581,20 +2582,24 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
       m%qp%Fd(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) + m%qp%Fb(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem)
 
       DO j=1,p%nodes_per_elem
+         tmp1=p%Shp(j,idx_qp)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
          DO idx_dof2=1,p%dof_node
             DO i=1,p%nodes_per_elem
+               tmp2=tmp1*p%Shp(i,idx_qp)
                DO idx_dof1=1,p%dof_node
-                  m%elm(idx_dof1,i,idx_dof2,j) = m%elm(idx_dof1,i,idx_dof2,j) + p%Shp(i,idx_qp)*m%qp%Mi(idx_dof1,idx_dof2,idx_qp,nelem)*p%Shp(j,idx_qp)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+                  !m%elm(idx_dof1,i,idx_dof2,j) = m%elm(idx_dof1,i,idx_dof2,j) + p%Shp(i,idx_qp)*m%qp%Mi(idx_dof1,idx_dof2,idx_qp,nelem)*p%Shp(j,idx_qp)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+                  m%elm(idx_dof1,i,idx_dof2,j) = m%elm(idx_dof1,i,idx_dof2,j) + m%qp%Mi(idx_dof1,idx_dof2,idx_qp,nelem)*tmp2
                ENDDO
             ENDDO
+            m%elf(idx_dof2,j,nelem) = m%elf(idx_dof2,j,nelem) - p%ShpDer(j,idx_qp)*m%qp%Fc(idx_dof2,idx_qp,nelem)*p%QPtWeight(idx_qp) - tmp1*m%qp%Fd(idx_dof2,idx_qp,nelem)
          ENDDO
       ENDDO
-      DO i=1,p%nodes_per_elem
-         DO idx_dof1=1,p%dof_node
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
-         ENDDO
-      ENDDO
+      !DO i=1,p%nodes_per_elem
+      !   DO idx_dof1=1,p%dof_node
+      !      m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
+      !      m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+      !   ENDDO
+      !ENDDO
 
 
    ENDDO
